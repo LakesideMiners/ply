@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 import os,socket
 from pathlib import Path
-from decouple import config
+from decouple import config,Csv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,7 +25,8 @@ SECRET_KEY = config("SECRET_KEY")
 DEBUG = config('PLY_DEBUG') == 'TRUE'
 
 #TODO: MAKE IT SO ALLOWED HOSTS ARE OPTIONAL!
-ALLOWED_HOSTS = [config("ALLOWED_HOST_1"),config("ALLOWED_HOST_2"),config("ALLOWED_HOST_3")] 
+#ALLOWED_HOSTS = [config("ALLOWED_HOST_1"),config("ALLOWED_HOST_2"),config("ALLOWED_HOST_3")] 
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
 
 STATIC_ROOT = config("STATIC_ROOT")
 
@@ -43,6 +44,7 @@ INSTALLED_APPS = [
     'storages',
     'mathfilters',
     'phonenumber_field',
+    'colorful',
     'notifications',
     'dashboard',
     'dynapages',
@@ -270,7 +272,7 @@ PLY_GALLERY_PLUGINS = [
     ]
 PLY_AVATAR_FORMATS = ["jpg","jpeg","gif","png","webp","svg"]
 PLY_AVATAR_MAX_PX = [1024,1024]
-PLY_VERSION = "2022.04.2200"
+PLY_VERSION = "2022.05.2300"
 try:
     PLY_HOSTNAME = socket.gethostname()
 except:
@@ -290,6 +292,7 @@ PLY_GALLERY_SHARE_URL_BASE_URL = config("PLY_GALLERY_SHARE_URL_BASE_URL")
 PLY_MSG_BROKER_URL=config("PLY_MSG_BROKER_URL")
 GALLERY_PHOTOS_THUMBNAIL_SIZE = int(config("GALLERY_PHOTOS_THUMBNAIL_SIZE"))
 PLY_GALLERY_MIN_DPI = int(config("PLY_GALLERY_MIN_DPI"))
+PLY_GALLERY_MAX_ORIGINAL_SIZE = int(config("PLY_GALLERY_MAX_ORIGINAL_SIZE"))
 CELERY_BROKER_URL=config("CELERY_BROKER_URL")
 PLY_AVATAR_MAX_KB = int(config("PLY_AVATAR_MAX_KB"))
 PLY_AVATAR_STORAGE_USE_S3 = config('PLY_AVATAR_STORAGE_USE_S3')

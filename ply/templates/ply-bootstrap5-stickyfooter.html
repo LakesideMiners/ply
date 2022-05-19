@@ -2,7 +2,7 @@
 {% load django_bootstrap5 %}
 {% load i18n %}
 {% get_current_language as LANGUAGE_CODE %}
-<html lang="{{ LANGUAGE_CODE|default:'en_us' }}">
+<html lang="{{ LANGUAGE_CODE|default:'en_us' }}" class="has-sticky-footer">
 
 <head>
 
@@ -34,6 +34,7 @@
 {% block bootstrap_doc_body %}<body>{% endblock %}
 {% block bootstrap5_before_content %}{% endblock %}
 {% block bootstrap5_content %} CONTENT {% endblock %}
+
 {% block bootstrap5_after_content %}{% endblock %}
 
 <!-- Bootstrap JavaScript if it is in body -->
@@ -42,6 +43,8 @@
 {% endif %}
 
 {% block bootstrap5_extra_script %}{% endblock %}
+
+
 
 </body>
 
