@@ -6,10 +6,11 @@ import ply
 from ply.toolkit import vhosts,file_uploader,logger as plylog
 from gallery_photos import utilities
 from ply import settings
+from gallery.models import GalleryTempFileThumb
 
 log = plylog.getLogger('gallery_photos.metadata',name='gallery_photos.metadata')
 
-def thumbnail(profile,file):
+def thumbnail(profile,file,file_obj):
     #print(file.name)
     #fullpath = ply.settings.PLY_TEMP_FILE_BASE_PATH+file_uploader.get_temp_path(file.name,profile)
     fullpath = pathlib.Path(file.name)
@@ -32,13 +33,15 @@ def thumbnail(profile,file):
                 im.close()
                 #file.thumbnail = tpath
                 #file.save()
+                tempFileObj = GalleryTempFileThumb(file=file_obj,path=tpath,file_size=im.tell())
+                tempFileObj.save()
             except Exception as e:
                  log.exception(e)
-                 log.error(f"Unable to generate Thumbnail for {file.path}: Exception: {e}")
+                 log.error(f"With Image Open: Unable to generate Thumbnail for {file}: Exception: {e}")
                  return None
     except Exception as e:
         log.exception(e)
-        log.error(f"Unable to generate Thumbnail for {file.path}: Exception: {e}")
+        log.error(f"Unable to generate Thumbnail for {file}: Exception: {e}")
         return None
     return tpath
                 
@@ -79,4 +82,24 @@ def initial_import_gen(relpath,ret_image=False):
         log.error(f"Unable to generate Metadata for {path}: Exception: {e}")
         return None
     
-        
+def update_item_metadata(data,item):
+    if (type(item.plugin_data) == str):
+        id = json.loads(item.plugin_data)
+    else:
+        id = item.plugin_data
+    if 'down_size' in data:
+        id['down_size'] = data['down_size']
+    changed = False
+    if 'sizing' in data:
+        if 'sizing' in id:
+            if (id['sizing'] != data['sizing']):
+                id['sizing'] = data['sizing']
+                changed = True
+        else:
+            id['sizing'] = data['sizing']
+            changed = False
+    item.plugin_data = id
+    return changed
+
+
+

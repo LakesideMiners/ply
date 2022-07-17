@@ -26,11 +26,11 @@
 
 
 
-
-    {%include template %}
-
+  {%with "dynapages/"|add:template as src %}
+    {%include src %}
+  {%endwith %}
 
  </div>
 </div>
 
-
+{% endblock %}

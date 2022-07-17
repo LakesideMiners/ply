@@ -1,3 +1,4 @@
+{% load humanize %}
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container-fluid">
 
@@ -13,7 +14,7 @@
             <a class="nav-link" href="/almanac"><i class="fa-solid fa-earth-africa"></i> About</a>
         </li>
         <li class="nav-item">
-           <a class="nav-link" href="#"><i class="fa-solid fa-book-open"></i> Blog</a>
+           <a class="nav-link" href="/blogs"><i class="fa-solid fa-book-open"></i> Blog</a>
         </li>
         <li class="nav-item">
             <a class="nav-link" href="/profiles/index"><i class="fa-solid fa-id-card-clip"></i> Profiles</a>
@@ -25,7 +26,7 @@
              <a class="nav-link" href="/gallery/index"><i class="fa-solid fa-images"></i> Galleries</a>
         </li>
         <li class="nav-item">
-           <a class="nav-link" href="#"><i class="fa-solid fa-wifi"></i> Stream</a>
+           <a class="nav-link" href="/stream"><i class="fa-solid fa-wifi"></i> Stream</a>
         </li>
        
          <li class="nav-item dropdown dropstart" >
@@ -37,13 +38,17 @@
                  <ul class="dropdown-menu" aria-labelledby="navbarDropdown" style="min-width: 250px; padding: 5px;">
                  <li><strong class="dropdown-item-text"><i class="fa-solid fa-bell"></i>&#160;Notifications:</strong></li>
                  <li class="dropdown-item-text">
-                 <i class="fa-solid fa-comment"></i>1,500
+                 <span class="badge rounded-pill bg-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Notifications">
+                 <i class="fa-solid fa-comment"></i>&#160;{{ current_profile.notifications|intcomma }}
+                 </span>
                  &#160;
-                 
-                 <i class="fa-solid fa-comment"></i>1,500
+                 <span class="badge rounded-pill bg-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Messages">
+                 <i class="fa-solid fa-envelope"></i>&#160;{{ current_profile.messages|intcomma }}
+                 </span>
                  &#160;
-                 
-                 <i class="fa-solid fa-comment"></i>1,500
+                 <span class="badge rounded-pill bg-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Mentions">
+                 <i class="fa-solid fa-quote-left"></i>&#160;{{ current_profile.mentions|intcomma }}
+                 </span>
                  &#160;
                  
                  </li>  

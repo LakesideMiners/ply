@@ -11,10 +11,14 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 import os,socket
 from pathlib import Path
-from decouple import config,Csv
+from decouple import Config,Csv,RepositoryEnv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+# Enable loading configuration files from ./config: (which can be mounted as an overlay!)
+if (os.path.isdir(os.getcwd()+"/config")):
+    config = Config(RepositoryEnv(os.getcwd()+"/config/settings.ini"))
+else:
+    from decouple import config
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
@@ -32,19 +36,24 @@ STATIC_ROOT = config("STATIC_ROOT")
 
 # Application definition
 INSTALLED_APPS = [
+    'grappelli',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     'django_bootstrap5',
     'django_registration',
     'martor',
+    'preferences',
     'storages',
     'mathfilters',
     'phonenumber_field',
     'colorful',
+    'emoji',
+    'categories',
     'notifications',
     'dashboard',
     'dynapages',
@@ -65,6 +74,8 @@ INSTALLED_APPS = [
     'items',
     'forge',
     'almanac',
+    'SLHUD',
+    'plydice',
     'ply'
 ]
 
@@ -91,6 +102,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+
             ],
         },
     },
@@ -161,6 +173,14 @@ if USE_S3:
     STATIC_URL = '%s/%s' % (AWS_S3_ENDPOINT_URL, AWS_LOCATION)
     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 else:
+    if (config("ALWAYS_LOAD_S3") == "TRUE"):
+        # aws settings
+        AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+        AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+        AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL')
+        AWS_DEFAULT_ACL = 'public-read'
+        AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
     STATIC_URL = '/static/'
     STATIC_ROOT = config('STATIC_ROOT')
     STATICFILES_DIRS = (os.path.join(BASE_DIR, 'static'),)
@@ -194,6 +214,8 @@ MARTOR_TOOLBAR_BUTTONS = [
     'direct-mention', 'toggle-maximize', 'help'
 ]
 
+
+BOOTSTRAP5= {"javascript_in_head": True }
 # To setup the martor editor with title label or not (default is False)
 MARTOR_ENABLE_LABEL = False
 
@@ -263,7 +285,9 @@ REGISTRATION_SALT = 'ae3Phoge'
 # PLY:
 PLY_USER_DASHBOARD_MODULES = [
     "profiles",
-    "gallery"
+    "gallery",
+    "notifications",
+    "preferences"
     
     ]
 
@@ -298,3 +322,4 @@ PLY_AVATAR_MAX_KB = int(config("PLY_AVATAR_MAX_KB"))
 PLY_AVATAR_STORAGE_USE_S3 = config('PLY_AVATAR_STORAGE_USE_S3')
 PLY_DYNAPAGES_PROFILE_TEMPLATE=config("PLY_DYNAPAGES_PROFILE_TEMPLATE")
 PLY_DYNAPAGES_PROFILE_TEMPLATE_BANNER_WIDGET = config("PLY_DYNAPAGES_PROFILE_TEMPLATE_BANNER_WIDGET")
+GRAPPELLI_ADMIN_TITLE="PLY Admin @ "+PLY_HOSTNAME

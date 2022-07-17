@@ -24,6 +24,9 @@ window.gallery_core = Object({
         viewer_info: "#gallery-span",
         viewer_hdr: ".gallery-modal-header",
         like_btn: "#btn-like",
+        like_url: "/dashboard/user/gallery/api/fav/item/",
+        like_q_url: "/dashboard/user/gallery/api/get/fav/item/",
+        like_active_c: "bg-secondary text-white",
         share_btn: "#btn-share",
         dl_btn: "#btn-download",
         views_btn: "#btn-views",
@@ -42,12 +45,15 @@ window.gallery_core = Object({
         sh_li_url: "https://www.linkedin.com/sharing/share-offsite/?url=",
         sh_tele: "#sh_tele",
         sh_tele_url:"https://t.me/share/url?url=",
+        sh_recast_url: "/dashboard/user/gallery/api/recast",
         confirm_pub_modal: "#confirmModal",
         collection_cat: ".dashboard-category",
         gallery_card_cls: ".gallery-card",
         in_col_str: " <i>in collection:</i> ", 
         share_fb_str: "Copied to clipboard!",
         max_upload_size: 25600,
+        confirm_rem_modal: "#deleteModal",
+        rem_url_temp: "/dashboard/user/gallery/api/remove/temp",
     },
     editor: {
         file:"",
@@ -55,7 +61,8 @@ window.gallery_core = Object({
         url:"",
         bound: false
     },
-    
+    /** For REMoval/delete operations: **/
+    rem_target: false,
     /** Plugin Control: _pLoaded keeps track of loaded plugins by name to prevent reinitialisation. Plugins that need to extend dashboard can register themselves into the plugins object below: **/
     _pLoaded: [],
     plugins: [],
@@ -80,7 +87,9 @@ window.gallery_core = Object({
         last: "",
         cards: [],
         current: false,
-        colid: false
+        colid: false,
+        pageX: 0,
+        pageY: 0
     },
 
 /** Callback function for loadPlugin: **/
@@ -263,7 +272,7 @@ window.gallery_core = Object({
 
     },
    
-    
+
      /** Init plugins then galleries (full init... ONLY CALL ONCE!): **/
      launch_gallery_init: function() { 
         
@@ -288,13 +297,21 @@ window.gallery_core = Object({
             if (this.canvas_visible == false) {
                 this.canvas_visible = true;
                 this.canvas_element.css('display','block');
+                this.canvas_element.on('click',this._canvasClick);
                 $(window).bind('keydown',window.gallery_core._kbk_evh);
             } else {
                 this.canvas_visible = false;
                 this.canvas_element.css('display','none');
+                this.canvas_element.off('click');
                 $(window).unbind('keydown',window.gallery_core._kbk_evh);
                 location.hash = "";
             }
+    },
+    /** This function handles mouse clicks for the viewer: **/
+    _canvasClick: function(e) {
+        gallery_core.nav.pageX = e.pageX;
+        gallery_core.nav.pageY = e.pageY;
+        $(window.gallery_core).trigger('canvas-click');
     },
     /** These function handles key bindings for the viewer: **/
     _kbk_evh: function(e) {
@@ -330,14 +347,28 @@ window.gallery_core = Object({
         }
         e.preventDefault();
     },
+    /** Handle the apperance like button: **/
+    _like_btn_en: function(d){
+        if (d == true) {
+            $(gallery_core.settings.like_btn).addClass(gallery_core.settings.like_active_c);
+//             $(gallery_core.settings.like_btn).attr("disabled","disabled");
+        } else {
+//             $(gallery_core.settings.like_btn).attr("disabled","");
+            $(gallery_core.settings.like_btn).removeClass(gallery_core.settings.like_active_c);
+        };
+    },
      /** This function _renders_ a gallery card's metadata: **/
      _gallery_card_meta: function(target_card,col,item) {
+
          /** Send metadata and metrics to server: **/
+         $.get(this.settings.like_q_url+item,this._like_btn_en);
          $.get(this.settings.view_count_url+"/?itm="+item+"&col="+target_card.data("collection"));
           /** Update viewer data: **/
                 /** Load Counts: **/
                     $(this.settings.com_btn).find('.count').html(target_card.data("comments"));
                     $(this.settings.like_btn).find('.count').html(target_card.data("likes"));
+                    $(this.settings.like_btn).on('click',function(){                            $.get(gallery_core.settings.like_url+item,gallery_core._like_btn_en);
+                    });
                     $(this.settings.share_btn).find('.count').html(target_card.data("shares"));
                     $(this.settings.dl_btn).find('.count').html(target_card.data("downloads"));
                     $(this.settings.views_btn).find('.count').html(target_card.data("views"));
@@ -397,6 +428,10 @@ window.gallery_core = Object({
         $.get(this.settings.share_count_url+"/?itm="+$(this.settings.share_url_ctrl).data("i")+"&col="+$(this.settings.share_url_ctrl).data("c"));
         
     },
+    /** Recasting: will publish to the stream, "share to ply", and create a 'recast' metric: **/
+     recast: function() {
+         $.get(this.settings.sh_recast_url+"/"+$(this.settings.share_url_ctrl).data("c")+"/"+$(this.settings.share_url_ctrl).data("i"));
+     },
      /** This function launches a gallery from a card: **/
      launch_gallery_card: function(e) {
          target_card = this._parent_walker(e.target,"DIV");
@@ -464,7 +499,7 @@ window.gallery_core = Object({
          this._gallery_card_meta(target_card,col,item);
         /** Now render the contents: **/
         location.hash = "#card-"+col+"-"+item;
-        render_card = this.plugins[itm_o.plugin].render_view(itm_o);0
+        render_card = this.plugins[itm_o.plugin].render_view(itm_o);
         if (render_card == false) {
             console.error("RenderCard went wrong!");
             console.error(render_card);
@@ -515,8 +550,13 @@ window.gallery_core = Object({
              lhash_crd[0].click();
          }
      },
+
+
     /********************/
     /** These functions enable you to PUBLISH/edit items: **/
+
+
+    /** Start the publisher and it's handler: **/
     _launch_publisher: function() {
         $(gallery_core.settings.review_panel).load(gallery_core.editor.url,function(e){
                 review_setup_ok = gallery_core.plugins[gallery_core.editor.plugin].prepare_review();
@@ -566,6 +606,22 @@ window.gallery_core = Object({
         if (review_pub_ok == true) {
             $(gallery_core.settings.confirm_pub_modal).modal('show');
         }
-    }
+    },
+
+    /** Delete an uploaded temp file and its event handler: **/
+   _confirm_rem_h: function (r) {
+       if (r == "ok") {
+           $("#card-"+gallery_core.rem_target).remove();
+       }
+
+    },
+    _confirm_rem: function() {
+            $.get(window.gallery_core.settings.rem_url_temp+"/"+this.rem_target,this._confirm_rem_h);
+    },
+
+   remove_upload: function(id) {
+       gallery_core.rem_target = id;
+       $(gallery_core.settings.confirm_rem_modal).modal('show');
+   }
 });
 

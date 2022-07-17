@@ -1,20 +1,22 @@
-from django.shortcuts import render
+from django.shortcuts import render,get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse,HttpResponse
 from PIL import Image
 import datetime
+from django.db import IntegrityError, transaction
 # Ply:
 from profiles.models import Profile
 from profiles.forms import ProfileForm
 from community.forms import CommunityForm
 from ply import settings,system_uuids
-from ply.toolkit import vhosts,profiles,logger,file_uploader,groups
+from ply.toolkit import vhosts,profiles,logger,file_uploader,groups,reqtools
 from dynapages.models import Templates,Page,Widget,PageWidget
 from dashboard.navigation import SideBarBuilder
 from stats.models import BaseStat,ProfileStat
 from community.models import Community,CommunityProfile,CommunityAdmins
 from stream.forms import StreamSettingsForm
-from stream.models import Stream
+from stream.models import Stream,StreamMessage
+import ply
 # Create your views here.
 
 # Upload an avatar and apply it to the currently specified profile in the session space:
@@ -42,16 +44,36 @@ def set_profile_settings(request):
 
 
 
-# UPDATE the currently enabled profile in session space with the provided data from the form:
+# Publish to a specific profile's primary stream:
 @login_required
-def update_character_profile(request):
-    profile = Profile.objects.get(uuid=request.session['profile'])
-    form = ProfileForm(request.POST,instance=profile)
-    if (not form.is_valid()):
-        return JsonResponse({"res":"err","e":str(form.errors.as_data())},safe=False)
-    form.save()
-    profile.save()
-    return JsonResponse({"res":"ok"},safe=False)   
+@transaction.atomic
+def publish_to_profile(request,profile):
+    """
+    @brief Publish A POST to a specific profile's primary stream:..
+    :param request: p_request:Django Request
+    :type request: t_request:str
+    :param profile: p_profile:Profile Slug ID
+    :type profile: undefined
+    :returns: r JSON error object or rendered Stream card
+    """
+    community = reqtools.vhost_community_or_404(request)
+    profile = get_object_or_404(Profile,profile_id=profile)
+    author = profiles.get_active_profile(request)
+
+    stream = Stream.objects.get(community=community,profile=profile,root_stream=True,type="PROFILE")
+    stream.nodes += 1
+    stream.save()
+    msg_text = request.POST["contents_text"]
+    msg_type = request.POST["type"]
+    message = StreamMessage(stream=stream,author=author,type=msg_type,contents_text=msg_text)
+    message.save()
+    #For the author's stream - if we're posting in streams other than the ones we own...:
+    if (author != profile):
+        author_stream = Stream.objects.get(community=community,profile=author,root_stream=True,type="PROFILE")
+        author_stream.nodes += 1
+        referenceMessage = StreamMessage(stream=author_stream,author=author,type='application/ply.stream.refmsg',references=message,posted_in=stream)
+        referenceMessage.save() 
+    return JsonResponse({"res":"ok","uuid":message.uuid},safe=False)
 
 
 # FINISH the currently enabled profile in session space:

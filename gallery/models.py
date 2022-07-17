@@ -4,7 +4,7 @@ from profiles.models import Profile
 from community.models import Community
 from group.models import Group
 from keywords.models import Keyword
-
+from categories.models import Category
 import uuid,json
 
 # Create your models here.
@@ -83,8 +83,12 @@ class GalleryItem(models.Model):
     item_hash = models.TextField(max_length=200,verbose_name='Item Hash')
     title = models.TextField(max_length=200,verbose_name='Item Title')
     profile = models.ForeignKey(Profile,verbose_name='Item Owner',on_delete=models.RESTRICT)
+    category = models.ForeignKey(Category,verbose_name='Item Category',on_delete=models.RESTRICT)
     sizing = models.IntegerField(verbose_name='Sizing Hint',default=0)
     nsfw = models.CharField(verbose_name="Item NSFW Flag",default=False,max_length=10)
+    en_comments = models.BooleanField(verbose_name="Item Comments Enabled Flag",default=True)
+    en_sharing = models.BooleanField(verbose_name="Item Sharing Enabled Flag",default=True)
+    en_download = models.BooleanField(verbose_name="Item Download Enabled Flag",default=True)
     details = models.CharField(verbose_name="Item Details Flags",default=False,max_length=10)
     style = models.CharField(verbose_name="Item Style Flag",default=False,max_length=10)
     rating = models.CharField(verbose_name="Item Rating",default=False,max_length=10)
@@ -93,6 +97,9 @@ class GalleryItem(models.Model):
     updated = models.DateTimeField(auto_now=True,editable=False,verbose_name='tem Updated')
     files = models.IntegerField(verbose_name='File Count',default=0)
     plugin = models.TextField(verbose_name="Item Plugin",default='',null=True)
+    detail_style = models.TextField(verbose_name="Item Detail Style",default='b')
+    sizing_hint = models.TextField(verbose_name="Item Sizing Hint",default='1')
+    display_details = models.TextField(verbose_name="Item Display Details",default='t')
     thumbnail = models.TextField(verbose_name="Item Thumbnail",default='',null=True)
     plugin_data = models.JSONField(verbose_name="Item plugin-specific data",blank=True,null=True)
     views = models.IntegerField(verbose_name='Views Count',default=0)
@@ -127,10 +134,13 @@ class GalleryItemFile(models.Model):
     thumbnail = models.BooleanField(verbose_name="File is a thumbnail",default=False) 
     original = models.BooleanField(verbose_name="File is an Original",default=False) 
     file_size = models.FloatField(verbose_name='File Size',default=0)
-    
-    
     def __str__(self):
-        return f"Gallery Item File: {self.name}"
+        if self.thumbnail is False and self.original is False:
+            return f"Gallery Item Display File: {self.name}"
+        elif self.original is True:
+            return f"Gallery Item Original File: {self.name}"
+        else:
+            return f"Gallery Item File: {self.name}"
     
 @admin.register(GalleryItemFile)
 class GalleryItemFileAdmin(admin.ModelAdmin):
@@ -170,7 +180,7 @@ class GalleryCollectionItemsAdmin(admin.ModelAdmin):
     
     
 class GalleryItemCategory(models.Model):
-    item = models.ForeignKey(GalleryItem,verbose_name='Item',on_delete=models.RESTRICT)
+    item = models.ForeignKey(GalleryItem,verbose_name='Item',on_delete=models.CASCADE)
     category = models.ForeignKey(GalleryArtworkCat,verbose_name='category',on_delete=models.RESTRICT)
     order = models.IntegerField(verbose_name='Order Column',default=0)
     created = models.DateTimeField(auto_now_add=True,editable=False,verbose_name='Created')
@@ -192,7 +202,8 @@ class GalleryItemKeyword(models.Model):
     updated = models.DateTimeField(auto_now=True,editable=False,verbose_name='Updated')
     archived = models.BooleanField(verbose_name="Archived FLAG",default=False)
     hidden = models.BooleanField(verbose_name="Hidden FLAG",default=False)
-
+    def __str__(self):
+        return f"Gallery Keyword: {self.item.uuid} -> Keyword: {self.keyword.keyword}"
 @admin.register(GalleryItemKeyword)
 class GalleryItemKeywordAdmin(admin.ModelAdmin):
     pass
@@ -269,7 +280,23 @@ class GalleryTempFile(models.Model):
 @admin.register(GalleryTempFile)
 class GalleryTempFileAdmin(admin.ModelAdmin):
     pass
-     
+
+class GalleryTempFileThumb(models.Model):
+    file = models.ForeignKey(GalleryTempFile,verbose_name='Item',on_delete=models.CASCADE)
+    path = models.TextField(verbose_name='File Path',blank=True,null=True)
+    file_size = models.FloatField(verbose_name='File Size',default=0)
+    order = models.IntegerField(verbose_name='Order Column',default=0)
+    created = models.DateTimeField(auto_now_add=True,editable=False,verbose_name='Created')
+    updated = models.DateTimeField(auto_now=True,editable=False,verbose_name='Updated')
+    archived = models.BooleanField(verbose_name="Archived FLAG",default=False)
+    hidden = models.BooleanField(verbose_name="Hidden FLAG",default=False)
+    def __str__(self):
+        return f"Gallery Item Temporary File Thumbnail: {self.file.name} @ {self.path}"
+    def get_meta_json(self):
+        return str(json.dumps(self.meta))  
+@admin.register(GalleryTempFileThumb)
+class GalleryTempFileThumbAdmin(admin.ModelAdmin):
+    pass
      
 class GalleryTempFileCollections(models.Model):
     collection = models.ForeignKey(GalleryCollection,verbose_name='Collection',on_delete=models.CASCADE)
@@ -290,7 +317,23 @@ class GalleryTempFileKeywords(models.Model):
     archived = models.BooleanField(verbose_name="Archived FLAG",default=False)
     hidden = models.BooleanField(verbose_name="Hidden FLAG",default=False)
     
-    
+
+class GalleryFavourite(models.Model):
+    item = models.ForeignKey(GalleryItem,verbose_name='Item',on_delete=models.CASCADE)
+    community = models.ForeignKey(Community,verbose_name="Community",on_delete=models.RESTRICT,null=True,blank=True)
+    profile = models.ForeignKey(Profile,verbose_name='Item',on_delete=models.RESTRICT)
+    created = models.DateTimeField(auto_now_add=True,editable=False,verbose_name='Created')
+    updated = models.DateTimeField(auto_now=True,editable=False,verbose_name='Updated')
+    archived = models.BooleanField(verbose_name="Archived FLAG",default=False)
+    hidden = models.BooleanField(verbose_name="Hidden FLAG",default=False)
+    flagged = models.BooleanField(verbose_name="FLAGGED",default=False)
+    def __str__(self):
+        return f"Gallery Favourite: {self.profile.profile_id} fav'd {self.item.title}"
+
+@admin.register(GalleryFavourite)
+class GalleryFavouriteAdmin(admin.ModelAdmin):
+    pass
+
 class GalleryItemsByCollectionPermission(models.Model):
     gcp_id = models.IntegerField(verbose_name="Collection Permission ID")
     gcp_updated = models.DateTimeField(verbose_name="Collection Permission Updated")

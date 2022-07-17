@@ -1,6 +1,14 @@
+"""
+toolkit/profiles.py
+====================================
+Toolkit utilities for interacting with Ply Profiles
+"""
+
+
 from community.models import Community,VHost
 from ply.toolkit.logger import getLogger
 from profiles.models import Profile
+from community.models import ProfilePerCoummunityView
 # get_vhost_community: Find the right community node for the given Vhost.
 # To match VHosts, we must at least match the host name, and optionally, the iapddr.
 # 
@@ -8,25 +16,39 @@ from profiles.models import Profile
 logging = getLogger('toolkit.vhosts',name='toolkit.vhosts')
 #print(vhost_logger)
 
-# get_active_profile will match the 'uuid' stored in request.session to the active profile from the database and return it. 
-# if there is no profile set it will select the first available profile that is active, unblocked and unarchived that matches the user in request.user.
 
 def get_active_profile(request):
-   if 'profile' not in request.session:
+    """
+    @brief Return the active profile object from the session attached to the request.
+    ===============================
+    :param request: p_request:Django Request Object
+    :type request: t_request:str
+    :returns: r:Profile object
+    """
+    if 'profile' not in request.session:
        profile = Profile.objects.filter(creator=request.user,archived=False,blocked=False,system=False,placeholder=False)[0]
        request.session['profile'] = str(profile.uuid)
        request.session.modified = True
-   else:
+    else:
        try:
            profile = Profile.objects.filter(uuid=request.session['profile'])[0]
        except profile.NotFound as e:
             return None
         
-   request.session.placeholder = False
-   return profile
+    request.session.placeholder = False
+    return profile
     
-# Returns all the profiles associated with the User:        
+# Returns all the profiles associated with the User:       
 def get_all_profiles(request):
+    """
+    Return all the profiles in the community for the user in the request
+
+    :param kind: request obj Django Request Object
+    :type kind: list[str] or None
+    :return: a Profiles QueryDict
+    :rtype: Profiles object
+
+   """
     profiles = Profile.objects.filter(creator=request.user,archived=False,blocked=False,system=False,placeholder=False)
     return profiles
     
@@ -46,3 +68,18 @@ def get_profile(request,puuid):
        profile = Profile.objects.get(pk=puuid,creator=request.user,archived=False,blocked=False,placeholder=False,system=False)
        request.session['profile'] = str(profile.uuid)
        return profile 
+
+# Get all available profiles that match a given user id, and a given community:
+def get_all_available_profiles(uid,community):
+    profiles = ProfilePerCoummunityView.objects.filter(community=community,profile_creator=uid)
+    return profiles
+
+
+# Get a profile for the specified user, you must specify PUUID as well:
+# If the passed user is not the owner of the passed profile uuid, False will be returned.
+def get_profile_for_user(user,puuid):
+    try:
+       profile = Profile.objects.get(pk=puuid,creator=user,archived=False,blocked=False,placeholder=False,system=False)
+       return profile
+    except profile.objects.NotFound:
+        return False

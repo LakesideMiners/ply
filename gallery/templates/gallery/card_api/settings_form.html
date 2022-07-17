@@ -1,0 +1,8 @@
+<form id="settings_form" method="POST" action="#" onsubmit="return gallery_core_editor._exec_set();">
+{%csrf_token%}
+{%load django_bootstrap5 %}
+<h5 class="text-primary">Settings for '{{item.title}}'</h5>
+
+{% bootstrap_form set_form %}
+{% bootstrap_button "Save" button_type="submit" button_class="btn-success" %}
+</form>

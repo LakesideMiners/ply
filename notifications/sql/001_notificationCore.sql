@@ -33,5 +33,22 @@ BEGIN
 END;
 $notifications_sendToInbox$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER "after_Inst_NotInbox" AFTER INSERT ON "notifications_notification"
+DROP TRIGGER  IF EXISTS  "after_Inst_NotInbox" ON "notifications_notification";
+CREATE TRIGGER "after_Inst_NotInbox" AFTER INSERT ON "notifications_notification"
 FOR EACH ROW EXECUTE FUNCTION notifications_sendToInbox();
+
+
+
+CREATE OR REPLACE FUNCTION mention_sendToInbox() RETURNS trigger AS $mention_sendToInbox$
+DECLARE
+    iterator RECORD;
+BEGIN
+    --- Update indices, first: ---
+    UPDATE profiles_profile SET mentions = profiles_profile.mentions + 1 WHERE uuid = NEW.recipient_id;
+    RETURN NEW;
+END;
+$mention_sendToInbox$ LANGUAGE plpgsql;
+
+DROP TRIGGER  IF EXISTS  "after_Inst_MenInbox" ON "notifications_mentions";
+CREATE  TRIGGER "after_Inst_MenInbox" AFTER INSERT ON "notifications_mentions"
+FOR EACH ROW EXECUTE FUNCTION mention_sendToInbox();
